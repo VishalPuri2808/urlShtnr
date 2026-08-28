@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -19,7 +20,8 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class UrlCacheService {
 
-    static final String KEY_PREFIX = "url:";
+    static final String KEY_PREFIX    = "url:";
+    static final String QR_KEY_PREFIX  = "qrcode:";
 
     private final RedisTemplate<String, Object> redisTemplate;
     private final AppProperties                 appProperties;
@@ -56,9 +58,30 @@ public class UrlCacheService {
         );
     }
 
+    public Optional<byte[]> getQrCode(String shortCode, int size) {
+        Object value = redisTemplate.opsForValue().get(QR_KEY_PREFIX + shortCode + ":" + size);
+        if (value instanceof byte[] bytes) return Optional.of(bytes);
+        return Optional.empty();
+    }
+
+    public void putQrCode(String shortCode, int size, byte[] png) {
+        redisTemplate.opsForValue().set(
+                QR_KEY_PREFIX + shortCode + ":" + size,
+                png,
+                appProperties.getCache().getTtlSeconds(),
+                TimeUnit.SECONDS
+        );
+    }
+
     /** Removes the entry; called synchronously on deactivate/delete. */
     public void evict(String shortCode) {
         redisTemplate.delete(KEY_PREFIX + shortCode);
+        // Invalidate all cached QR sizes for this code via the same path — no second invalidation path.
+        // KEYS is O(N); acceptable for dev. Use SCAN-based delete in high-traffic production.
+        Set<String> qrKeys = redisTemplate.keys(QR_KEY_PREFIX + shortCode + ":*");
+        if (qrKeys != null && !qrKeys.isEmpty()) {
+            redisTemplate.delete(qrKeys);
+        }
     }
 
     /** Caps the TTL at time-to-expiry so Redis self-evicts when the link expires. */

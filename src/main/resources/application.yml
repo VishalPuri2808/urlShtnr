@@ -4,7 +4,7 @@ spring:
 
   # ── Datasource ─────────────────────────────────────────────────────────────
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:urlshortener}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:urlshortener}${DB_SSL_PARAMS:}
     username: ${DB_USER:urlshortener}
     password: ${DB_PASSWORD:urlshortener}
     hikari:
