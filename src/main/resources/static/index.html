@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Shortener</title>
+    <style>
+        :root {
+            --bg:      #0f172a;
+            --surface: #1e293b;
+            --border:  #334155;
+            --accent:  #6366f1;
+            --hover:   #818cf8;
+            --text:    #e2e8f0;
+            --muted:   #94a3b8;
+            --ok:      #10b981;
+            --err:     #ef4444;
+            --r:       8px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            padding: 2.5rem 1rem;
+        }
+        .wrap { max-width: 680px; margin: 0 auto; }
+
+        /* header */
+        header { text-align: center; margin-bottom: 2rem; }
+        header h1 { font-size: 1.8rem; font-weight: 700; color: var(--hover); }
+        header p  { color: var(--muted); font-size: 0.9rem; margin-top: 0.4rem; }
+
+        /* card */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            padding: 1.5rem;
+            margin-bottom: 1.25rem;
+        }
+        .card h2 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted);
+            margin-bottom: 1rem;
+        }
+
+        /* form elements */
+        label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 0.3rem; }
+        .field { margin-bottom: 0.85rem; }
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+        input[type=url], input[type=text], input[type=datetime-local] {
+            width: 100%;
+            padding: 0.6rem 0.8rem;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color .15s;
+        }
+        input:focus { border-color: var(--accent); }
+
+        /* buttons */
+        .btn-row { display: flex; gap: 0.5rem; align-items: center; }
+        .btn-row input { flex: 1; }
+        button {
+            padding: 0.6rem 1.2rem;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.88rem;
+            font-weight: 600;
+            transition: background .15s;
+            white-space: nowrap;
+        }
+        button:hover    { background: var(--hover); }
+        button:disabled { opacity: .55; cursor: default; }
+        button.outline  { background: transparent; border: 1px solid var(--border); color: var(--text); font-weight: 400; }
+        button.outline:hover { border-color: var(--muted); background: transparent; }
+        button.danger   { background: var(--err); }
+        button.danger:hover { background: #dc2626; }
+
+        /* result box */
+        .result-box {
+            margin-top: 1rem;
+            padding: 0.7rem 1rem;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .result-box a {
+            flex: 1;
+            color: var(--hover);
+            text-decoration: none;
+            font-weight: 600;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 0.95rem;
+        }
+        .result-box a:hover { text-decoration: underline; }
+
+        /* stats grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.65rem;
+            margin-top: 0.85rem;
+        }
+        .stat {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.75rem 1rem;
+        }
+        .stat-label { font-size: 0.73rem; color: var(--muted); margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: .04em; }
+        .stat-value { font-size: 1rem; font-weight: 600; word-break: break-all; }
+        .stat-value.big { font-size: 1.4rem; color: var(--hover); }
+        .deact-row { display: flex; justify-content: flex-end; margin-top: 0.85rem; }
+
+        /* messages */
+        .msg {
+            font-size: 0.85rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            margin-top: 0.75rem;
+        }
+        .msg.ok  { background: rgba(16,185,129,.1); color: var(--ok);  border: 1px solid rgba(16,185,129,.3); }
+        .msg.err { background: rgba(239,68,68,.1);  color: var(--err); border: 1px solid rgba(239,68,68,.3);  }
+        .hidden { display: none !important; }
+
+        footer { text-align: center; color: var(--muted); font-size: 0.75rem; margin-top: 2rem; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+
+    <header>
+        <h1>🔗 URL Shortener</h1>
+        <p>Shorten, track, and manage your links</p>
+    </header>
+
+    <!-- ── Create card ──────────────────────────────────────────── -->
+    <div class="card">
+        <h2>Shorten a URL</h2>
+
+        <div class="field">
+            <label for="longUrl">Destination URL *</label>
+            <input id="longUrl" type="url" placeholder="https://example.com/very/long/path" autofocus>
+        </div>
+        <div class="two-col">
+            <div class="field">
+                <label for="alias">Custom alias <span style="opacity:.6">(optional)</span></label>
+                <input id="alias" type="text" placeholder="my-promo">
+            </div>
+            <div class="field">
+                <label for="expiresAt">Expires at <span style="opacity:.6">(optional)</span></label>
+                <input id="expiresAt" type="datetime-local">
+            </div>
+        </div>
+
+        <button id="createBtn" onclick="createUrl()">Shorten →</button>
+
+        <div id="createMsg" class="msg hidden"></div>
+        <div id="createResult" class="result-box hidden">
+            <a id="shortLink" href="#" target="_blank" rel="noopener"></a>
+            <button class="outline" onclick="copyLink(this)">Copy</button>
+        </div>
+    </div>
+
+    <!-- ── Stats card ───────────────────────────────────────────── -->
+    <div class="card">
+        <h2>Stats &amp; Management</h2>
+
+        <div class="btn-row">
+            <input id="statsCode" type="text" placeholder="Short code  (e.g. abc1)">
+            <button onclick="loadStats()">Look up</button>
+        </div>
+
+        <div id="statsMsg" class="msg hidden"></div>
+
+        <div id="statsResult" class="hidden">
+            <div class="stats-grid">
+                <div class="stat">
+                    <div class="stat-label">Short URL</div>
+                    <div class="stat-value" id="s-url" style="font-size:.85rem"></div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Total Clicks</div>
+                    <div class="stat-value big" id="s-clicks">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Created</div>
+                    <div class="stat-value" id="s-created" style="font-size:.85rem"></div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Last Click</div>
+                    <div class="stat-value" id="s-last" style="font-size:.85rem"></div>
+                </div>
+            </div>
+            <div class="deact-row">
+                <button class="danger" onclick="deactivate()">Deactivate link</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<footer>Running on port 8080 · all data stored in PostgreSQL</footer>
+
+<script>
+let _activeCode = null;
+
+/* ── Create ─────────────────────────────────────────────────────── */
+async function createUrl() {
+    const longUrl   = document.getElementById('longUrl').value.trim();
+    const alias     = document.getElementById('alias').value.trim();
+    const expiresAt = document.getElementById('expiresAt').value;
+
+    if (!longUrl) { showMsg('createMsg', 'err', 'Please enter a destination URL.'); return; }
+
+    const btn = document.getElementById('createBtn');
+    btn.disabled = true; btn.textContent = 'Shortening…';
+    hide('createMsg'); hide('createResult');
+
+    try {
+        const body = { longUrl };
+        if (alias)     body.customAlias = alias;
+        if (expiresAt) body.expiresAt   = new Date(expiresAt).toISOString();
+
+        const res  = await fetch('/api/v1/urls', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+            const a = document.getElementById('shortLink');
+            a.href = a.textContent = data.shortUrl;
+            _activeCode = data.shortCode;
+            document.getElementById('statsCode').value = data.shortCode;
+            show('createResult');
+        } else {
+            showMsg('createMsg', 'err', data.detail || `Error ${res.status}`);
+        }
+    } catch { showMsg('createMsg', 'err', 'Network error — is the server running?'); }
+    finally  { btn.disabled = false; btn.textContent = 'Shorten →'; }
+}
+
+/* ── Stats ──────────────────────────────────────────────────────── */
+async function loadStats() {
+    const code = document.getElementById('statsCode').value.trim();
+    if (!code) { showMsg('statsMsg', 'err', 'Enter a short code.'); return; }
+
+    hide('statsMsg'); hide('statsResult');
+
+    try {
+        const res  = await fetch(`/api/v1/urls/${encodeURIComponent(code)}/stats`);
+        const data = await res.json();
+
+        if (res.ok) {
+            _activeCode = code;
+            document.getElementById('s-url').textContent      = `${location.origin}/${code}`;
+            document.getElementById('s-clicks').textContent   = data.totalClicks;
+            document.getElementById('s-created').textContent  = fmt(data.createdAt);
+            document.getElementById('s-last').textContent     = data.lastClickedAt ? fmt(data.lastClickedAt) : '—';
+            show('statsResult');
+        } else if (res.status === 404) {
+            showMsg('statsMsg', 'err', `Short code "${code}" not found.`);
+        } else if (res.status === 410) {
+            showMsg('statsMsg', 'err', `"${code}" exists but has been deactivated.`);
+        } else {
+            showMsg('statsMsg', 'err', data.detail || `Error ${res.status}`);
+        }
+    } catch { showMsg('statsMsg', 'err', 'Network error.'); }
+}
+
+/* ── Deactivate ─────────────────────────────────────────────────── */
+async function deactivate() {
+    if (!_activeCode) return;
+    if (!confirm(`Deactivate /${_activeCode}?\n\nAll future redirects will return 410 Gone.`)) return;
+
+    try {
+        const res = await fetch(`/api/v1/urls/${encodeURIComponent(_activeCode)}`, { method: 'DELETE' });
+        if (res.ok) {
+            hide('statsResult');
+            showMsg('statsMsg', 'ok', `/${_activeCode} has been deactivated. Redirects now return 410.`);
+        } else {
+            const d = await res.json();
+            showMsg('statsMsg', 'err', d.detail || `Error ${res.status}`);
+        }
+    } catch { showMsg('statsMsg', 'err', 'Network error.'); }
+}
+
+/* ── Helpers ────────────────────────────────────────────────────── */
+function copyLink(btn) {
+    const url = document.getElementById('shortLink').href;
+    navigator.clipboard.writeText(url).then(() => {
+        btn.textContent = '✓ Copied';
+        setTimeout(() => btn.textContent = 'Copy', 1600);
+    });
+}
+
+function fmt(iso) {
+    return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+function show(id) { document.getElementById(id).classList.remove('hidden'); }
+function hide(id) { document.getElementById(id).classList.add('hidden'); }
+function showMsg(id, type, text) {
+    const el = document.getElementById(id);
+    el.className = `msg ${type}`;
+    el.textContent = text;
+    show(id);
+}
+
+/* Enter-key shortcuts */
+document.getElementById('longUrl').addEventListener('keydown',   e => e.key === 'Enter' && createUrl());
+document.getElementById('statsCode').addEventListener('keydown', e => e.key === 'Enter' && loadStats());
+</script>
+</body>
+</html>
