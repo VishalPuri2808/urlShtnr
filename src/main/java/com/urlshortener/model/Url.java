@@ -13,6 +13,8 @@ public class Url {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // Policy (TASK 6-A): once assigned, a short code is permanently reserved — expired codes are
+    // never recycled so bookmarked links never silently redirect to unintended destinations.
     @Column(name = "short_code", nullable = false, unique = true, length = 20)
     private String shortCode;
 

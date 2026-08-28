@@ -149,6 +149,7 @@ public class UrlServiceImpl implements UrlService {
     @Override
     @Transactional
     public void deactivateUrl(String shortCode) {
+        // Policy (TASK 6-A): url_clicks rows are retained indefinitely; deactivation is soft-only.
         Url url = urlRepository.findByShortCode(shortCode)
                 .orElseThrow(() -> new UrlNotFoundException(shortCode));
         url.setActive(false);
@@ -161,6 +162,7 @@ public class UrlServiceImpl implements UrlService {
     @Override
     @Transactional(readOnly = true)
     public UrlStatsResponse getStats(String shortCode) {
+        // Policy (TASK 6-A): stats are returned even for deactivated/expired URLs.
         Url url = urlRepository.findByShortCode(shortCode)
                 .orElseThrow(() -> new UrlNotFoundException(shortCode));
 
