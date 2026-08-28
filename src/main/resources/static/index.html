@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -6,16 +6,17 @@
     <title>URL Shortener</title>
     <style>
         :root {
-            --bg:      #0f172a;
-            --surface: #1e293b;
-            --border:  #334155;
-            --accent:  #6366f1;
-            --hover:   #818cf8;
-            --text:    #e2e8f0;
-            --muted:   #94a3b8;
-            --ok:      #10b981;
-            --err:     #ef4444;
-            --r:       8px;
+            --navy:   #0e1b30;
+            --blue:   #1d4ed8;
+            --blue2:  #1e40af;
+            --bg:     #f1f5f9;
+            --white:  #ffffff;
+            --text:   #111827;
+            --muted:  #6b7280;
+            --border: #e5e7eb;
+            --green:  #059669;
+            --red:    #dc2626;
+            --r:      14px;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -23,134 +24,172 @@
             color: var(--text);
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             min-height: 100vh;
-            padding: 2.5rem 1rem;
         }
-        .wrap { max-width: 680px; margin: 0 auto; }
 
-        /* header */
-        header { text-align: center; margin-bottom: 2rem; }
-        header h1 { font-size: 1.8rem; font-weight: 700; color: var(--hover); }
-        header p  { color: var(--muted); font-size: 0.9rem; margin-top: 0.4rem; }
+        /* â”€â”€ Hero â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+        .hero {
+            background: linear-gradient(160deg, #0a1628 0%, #0e2040 100%);
+            padding: 3.5rem 1rem 0;
+            text-align: center;
+        }
+        .hero h1 {
+            font-size: clamp(1.6rem, 4vw, 2.4rem);
+            font-weight: 800;
+            color: #fff;
+            line-height: 1.2;
+            margin-bottom: 0.75rem;
+        }
+        .hero p {
+            color: #93c5fd;
+            font-size: 0.93rem;
+            max-width: 460px;
+            margin: 0 auto 2.25rem;
+        }
 
-        /* card */
+        /* â”€â”€ Tabs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+        .tabs {
+            display: inline-flex;
+            background: rgba(255,255,255,.08);
+            border-radius: 50px;
+            padding: 5px;
+            gap: 4px;
+        }
+        .tab {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.6rem 1.5rem;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: rgba(255,255,255,.6);
+            border: none;
+            background: transparent;
+            transition: all .15s;
+        }
+        .tab.active             { background: #fff; color: var(--navy); }
+        .tab:not(.active):hover { color: #fff; }
+
+        /* â”€â”€ Content wrapper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+        .hero-bottom { height: 2rem; background: linear-gradient(160deg, #0a1628 0%, #0e2040 100%); }
+        .wrap { max-width: 680px; margin: 0 auto; padding: 0 1rem 3rem; }
+
+        /* â”€â”€ Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
         .card {
-            background: var(--surface);
-            border: 1px solid var(--border);
+            background: var(--white);
             border-radius: var(--r);
-            padding: 1.5rem;
+            padding: 1.75rem 2rem;
+            box-shadow: 0 6px 30px rgba(0,0,0,.09);
             margin-bottom: 1.25rem;
         }
-        .card h2 {
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: var(--muted);
-            margin-bottom: 1rem;
-        }
+        .card-title   { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.3rem; }
+        .card-sub     { font-size: 0.85rem; color: var(--muted); margin-bottom: 1.5rem; }
+        #mainCard     { margin-top: -1rem; }
 
-        /* form elements */
-        label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 0.3rem; }
-        .field { margin-bottom: 0.85rem; }
-        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+        /* â”€â”€ Form â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+        label { display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 0.35rem; }
+        .field     { margin-bottom: 1rem; }
+        .two-col   { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
         input[type=url], input[type=text], input[type=datetime-local] {
             width: 100%;
-            padding: 0.6rem 0.8rem;
-            background: var(--bg);
-            border: 1px solid var(--border);
-            border-radius: 6px;
+            padding: 0.72rem 1rem;
+            background: var(--white);
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
             color: var(--text);
             font-size: 0.9rem;
             outline: none;
             transition: border-color .15s;
         }
-        input:focus { border-color: var(--accent); }
+        input:focus        { border-color: var(--blue); }
+        input::placeholder { color: #9ca3af; }
 
-        /* buttons */
-        .btn-row { display: flex; gap: 0.5rem; align-items: center; }
-        .btn-row input { flex: 1; }
-        button {
-            padding: 0.6rem 1.2rem;
-            background: var(--accent);
-            color: #fff;
-            border: none;
-            border-radius: 6px;
+        /* â”€â”€ Buttons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+        .btn {
+            padding: 0.75rem 1.6rem;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 0.88rem;
-            font-weight: 600;
-            transition: background .15s;
+            font-size: 0.9rem;
+            font-weight: 700;
+            border: none;
+            transition: background .15s, transform .08s;
             white-space: nowrap;
         }
-        button:hover    { background: var(--hover); }
-        button:disabled { opacity: .55; cursor: default; }
-        button.outline  { background: transparent; border: 1px solid var(--border); color: var(--text); font-weight: 400; }
-        button.outline:hover { border-color: var(--muted); background: transparent; }
-        button.danger   { background: var(--err); }
-        button.danger:hover { background: #dc2626; }
+        .btn:active { transform: scale(.98); }
+        .btn-primary { background: var(--blue); color: #fff; }
+        .btn-primary:hover:not(:disabled) { background: var(--blue2); }
+        .btn-primary:disabled { opacity: .55; cursor: default; }
+        .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text); font-weight: 500; }
+        .btn-outline:hover { border-color: #9ca3af; }
+        .btn-danger  { background: var(--red); color: #fff; }
+        .btn-danger:hover { background: #b91c1c; }
 
-        /* result box */
+        /* â”€â”€ Result box â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
         .result-box {
-            margin-top: 1rem;
-            padding: 0.7rem 1rem;
-            background: var(--bg);
-            border: 1px solid var(--border);
-            border-radius: 6px;
+            margin-top: 1.25rem;
+            padding: 0.85rem 1rem;
+            background: #f8fafc;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
             display: flex;
             align-items: center;
-            gap: 0.75rem;
+            gap: 0.65rem;
         }
         .result-box a {
             flex: 1;
-            color: var(--hover);
+            color: var(--blue);
             text-decoration: none;
-            font-weight: 600;
+            font-weight: 700;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
-            font-size: 0.95rem;
         }
         .result-box a:hover { text-decoration: underline; }
 
-        /* stats grid */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.65rem;
-            margin-top: 0.85rem;
+        /* â”€â”€ Stats â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+        .section-label {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: var(--muted);
+            font-weight: 600;
+            margin-bottom: 0.85rem;
         }
+        .action-row { display: flex; gap: 0.5rem; }
+        .action-row input { flex: 1; }
+        .divider { border: none; border-top: 1px solid var(--border); margin: 1rem 0; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; }
         .stat {
-            background: var(--bg);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 0.75rem 1rem;
+            background: #f8fafc;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            padding: 0.85rem 1rem;
         }
-        .stat-label { font-size: 0.73rem; color: var(--muted); margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: .04em; }
-        .stat-value { font-size: 1rem; font-weight: 600; word-break: break-all; }
-        .stat-value.big { font-size: 1.4rem; color: var(--hover); }
-        .deact-row { display: flex; justify-content: flex-end; margin-top: 0.85rem; }
-
-        /* messages */
-        .msg {
-            font-size: 0.85rem;
-            padding: 0.5rem 0.75rem;
-            border-radius: 6px;
-            margin-top: 0.75rem;
+        .stat-label {
+            font-size: 0.72rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            margin-bottom: 0.25rem;
         }
-        .msg.ok  { background: rgba(16,185,129,.1); color: var(--ok);  border: 1px solid rgba(16,185,129,.3); }
-        .msg.err { background: rgba(239,68,68,.1);  color: var(--err); border: 1px solid rgba(239,68,68,.3);  }
-        .hidden { display: none !important; }
+        .stat-value       { font-size: 1rem; font-weight: 600; }
+        .stat-value.big   { font-size: 1.5rem; color: var(--blue); }
+        .deact-row        { display: flex; justify-content: space-between; align-items: center; margin-top: 0.85rem; }
 
-        /* QR code panel */
+        /* â”€â”€ QR panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
         .qr-panel {
             margin-top: 1rem;
-            padding: 1rem;
-            background: var(--bg);
-            border: 1px solid var(--border);
-            border-radius: 6px;
+            padding: 1.25rem;
+            background: #f8fafc;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
             text-align: center;
         }
         .qr-panel img {
             background: #fff;
-            border-radius: 6px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
             padding: 10px;
             max-width: 220px;
             display: block;
@@ -167,30 +206,54 @@
         }
         .qr-controls select {
             padding: 0.35rem 0.6rem;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 5px;
+            background: var(--white);
+            border: 1.5px solid var(--border);
+            border-radius: 6px;
             color: var(--text);
             font-size: 0.82rem;
             cursor: pointer;
         }
-        .qr-dl { color: var(--hover); text-decoration: none; font-weight: 600; }
+        .qr-dl { color: var(--blue); text-decoration: none; font-weight: 600; }
         .qr-dl:hover { text-decoration: underline; }
 
-        footer { text-align: center; color: var(--muted); font-size: 0.75rem; margin-top: 2rem; }
+        /* â”€â”€ Messages â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+        .msg {
+            font-size: 0.85rem;
+            padding: 0.6rem 0.85rem;
+            border-radius: 8px;
+            margin-top: 0.85rem;
+        }
+        .msg.ok  { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+        .msg.err { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+
+        .hidden { display: none !important; }
+
+        footer { text-align: center; color: var(--muted); font-size: 0.75rem; padding: 1.5rem; }
     </style>
 </head>
 <body>
+
+<!-- â”€â”€ Hero â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<section class="hero">
+    <h1>Shorten, share &amp; track<br>your links</h1>
+    <p>Create short links, generate QR codes &mdash; all in one place.</p>
+    <div class="tabs">
+        <button class="tab active" id="tab-link" onclick="switchTab('link')">
+            &#x1F517;&nbsp; Short Link
+        </button>
+        <button class="tab" id="tab-qr" onclick="switchTab('qr')">
+            &#x268F;&nbsp; QR Code
+        </button>
+    </div>
+</section>
+<div class="hero-bottom"></div>
+
 <div class="wrap">
 
-    <header>
-        <h1>🔗 URL Shortener</h1>
-        <p>Shorten, track, and manage your links</p>
-    </header>
-
-    <!-- ── Create card ──────────────────────────────────────────── -->
-    <div class="card">
-        <h2>Shorten a URL</h2>
+    <!-- â”€â”€ Short Link panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+    <div id="panel-link" id="mainCard" class="card">
+        <p class="card-title">Shorten a long link</p>
+        <p class="card-sub">Paste your URL below and get a shareable short link instantly.</p>
 
         <div class="field">
             <label for="longUrl">Destination URL *</label>
@@ -198,22 +261,22 @@
         </div>
         <div class="two-col">
             <div class="field">
-                <label for="alias">Custom alias <span style="opacity:.6">(optional)</span></label>
+                <label for="alias">Custom alias&nbsp;<span style="color:#9ca3af;font-weight:400">(optional)</span></label>
                 <input id="alias" type="text" placeholder="my-promo">
             </div>
             <div class="field">
-                <label for="expiresAt">Expires at <span style="opacity:.6">(optional)</span></label>
+                <label for="expiresAt">Expires at&nbsp;<span style="color:#9ca3af;font-weight:400">(optional)</span></label>
                 <input id="expiresAt" type="datetime-local">
             </div>
         </div>
 
-        <button id="createBtn" onclick="createUrl()">Shorten →</button>
+        <button class="btn btn-primary" id="createBtn" onclick="createUrl()">Get your link &rarr;</button>
 
         <div id="createMsg" class="msg hidden"></div>
         <div id="createResult" class="result-box hidden">
             <a id="shortLink" href="#" target="_blank" rel="noopener"></a>
-            <button class="outline" onclick="copyLink(this)">Copy</button>
-            <button class="outline" onclick="toggleQr('createQrPanel')">&#x1F4F7; QR</button>
+            <button class="btn btn-outline" onclick="copyLink(this)">Copy</button>
+            <button class="btn btn-outline" onclick="toggleQr('createQrPanel')">&#x1F4F7; QR</button>
         </div>
         <div id="createQrPanel" class="qr-panel hidden">
             <img id="createQrImg" src="" alt="QR code">
@@ -230,22 +293,47 @@
         </div>
     </div>
 
-    <!-- ── Stats card ───────────────────────────────────────────── -->
-    <div class="card">
-        <h2>Stats &amp; Management</h2>
+    <!-- â”€â”€ QR Code panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+    <div id="panel-qr" class="card hidden">
+        <p class="card-title">Get a QR Code</p>
+        <p class="card-sub">Enter a short code to generate a scannable QR image.</p>
 
-        <div class="btn-row">
-            <input id="statsCode" type="text" placeholder="Short code  (e.g. abc1)">
-            <button onclick="loadStats()">Look up</button>
+        <div class="action-row">
+            <input id="qrCode" type="text" placeholder="Short code  (e.g. abc1)">
+            <button class="btn btn-primary" onclick="generateQr()">Generate</button>
         </div>
+        <div id="qrMsg" class="msg hidden"></div>
+        <div id="qrResult" class="qr-panel hidden">
+            <img id="qrResultImg" src="" alt="QR code">
+            <div class="qr-controls">
+                <span>Size:</span>
+                <select onchange="reloadQrTab(this.value)">
+                    <option value="200">200 px</option>
+                    <option value="300" selected>300 px</option>
+                    <option value="400">400 px</option>
+                    <option value="600">600 px</option>
+                </select>
+                <a id="qrResultDl" href="#" download="qrcode.png" class="qr-dl">&#x2B07; Download</a>
+            </div>
+        </div>
+    </div>
 
+    <!-- â”€â”€ Stats & Management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+    <div class="card">
+        <p class="section-label">Stats &amp; Management</p>
+
+        <div class="action-row">
+            <input id="statsCode" type="text" placeholder="Short code  (e.g. abc1)">
+            <button class="btn btn-primary" onclick="loadStats()">Look up</button>
+        </div>
         <div id="statsMsg" class="msg hidden"></div>
 
         <div id="statsResult" class="hidden">
+            <hr class="divider">
             <div class="stats-grid">
                 <div class="stat">
                     <div class="stat-label">Short URL</div>
-                    <div class="stat-value" id="s-url" style="font-size:.85rem"></div>
+                    <div class="stat-value" id="s-url" style="font-size:.85rem;word-break:break-all"></div>
                 </div>
                 <div class="stat">
                     <div class="stat-label">Total Clicks</div>
@@ -261,33 +349,31 @@
                 </div>
             </div>
             <div class="deact-row">
-                <button class="outline" onclick="toggleQr('statsQrPanel')" style="margin-right:auto">&#x1F4F7; QR</button>
-                <button class="danger" onclick="deactivate()">Deactivate link</button>
-            </div>
-            <div id="statsQrPanel" class="qr-panel hidden">
-                <img id="statsQrImg" src="" alt="QR code">
-                <div class="qr-controls">
-                    <span>Size:</span>
-                    <select onchange="reloadQr('statsQrImg','statsQrDl',this.value)">
-                        <option value="200">200 px</option>
-                        <option value="300" selected>300 px</option>
-                        <option value="400">400 px</option>
-                        <option value="600">600 px</option>
-                    </select>
-                    <a id="statsQrDl" href="#" download="qrcode.png" class="qr-dl">&#x2B07; Download</a>
-                </div>
+                <button class="btn btn-outline" onclick="toggleQr('statsQrPanel')">&#x1F4F7; QR</button>
+                <button class="btn btn-danger"  onclick="deactivate()">Deactivate link</button>
             </div>
         </div>
     </div>
 
 </div>
 
-<footer>Running on port 8080 · all data stored in PostgreSQL</footer>
+<footer>URL Shortener &middot; powered by Spring Boot &middot; PostgreSQL &middot; Redis &middot; Kafka</footer>
 
 <script>
 let _activeCode = null;
+let _qrTabCode  = null;
 
-/* ── Create ─────────────────────────────────────────────────────── */
+/* â”€â”€ Tabs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+function switchTab(tab) {
+    document.getElementById('panel-link').classList.toggle('hidden', tab !== 'link');
+    document.getElementById('panel-qr').classList.toggle('hidden',  tab !== 'qr');
+    document.getElementById('tab-link').classList.toggle('active', tab === 'link');
+    document.getElementById('tab-qr').classList.toggle('active',   tab === 'qr');
+    if (tab === 'link') document.getElementById('longUrl').focus();
+    else                document.getElementById('qrCode').focus();
+}
+
+/* â”€â”€ Create â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 async function createUrl() {
     const longUrl   = document.getElementById('longUrl').value.trim();
     const alias     = document.getElementById('alias').value.trim();
@@ -296,8 +382,8 @@ async function createUrl() {
     if (!longUrl) { showMsg('createMsg', 'err', 'Please enter a destination URL.'); return; }
 
     const btn = document.getElementById('createBtn');
-    btn.disabled = true; btn.textContent = 'Shortening…';
-    hide('createMsg'); hide('createResult');
+    btn.disabled = true; btn.textContent = 'Shortening\u2026';
+    hide('createMsg'); hide('createResult'); hide('createQrPanel');
 
     try {
         const body = { longUrl };
@@ -316,21 +402,56 @@ async function createUrl() {
             a.href = a.textContent = data.shortUrl;
             _activeCode = data.shortCode;
             document.getElementById('statsCode').value = data.shortCode;
-            hide('createQrPanel'); // reset QR panel for the new code
+            document.getElementById('qrCode').value    = data.shortCode;
             show('createResult');
         } else {
             showMsg('createMsg', 'err', data.detail || `Error ${res.status}`);
         }
-    } catch { showMsg('createMsg', 'err', 'Network error — is the server running?'); }
-    finally  { btn.disabled = false; btn.textContent = 'Shorten →'; }
+    } catch { showMsg('createMsg', 'err', 'Network error \u2014 is the server running?'); }
+    finally  { btn.disabled = false; btn.textContent = 'Get your link \u2192'; }
 }
 
-/* ── Stats ──────────────────────────────────────────────────────── */
+/* â”€â”€ QR tab: generate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+async function generateQr() {
+    const code = document.getElementById('qrCode').value.trim();
+    if (!code) { showMsg('qrMsg', 'err', 'Enter a short code.'); return; }
+
+    hide('qrMsg'); hide('qrResult');
+
+    try {
+        const res = await fetch(`/api/v1/urls/${encodeURIComponent(code)}/stats`);
+        if (res.ok) {
+            _qrTabCode = code;
+            const url  = `/api/v1/urls/${encodeURIComponent(code)}/qrcode?size=300`;
+            document.getElementById('qrResultImg').src      = url;
+            document.getElementById('qrResultDl').href      = url;
+            document.getElementById('qrResultDl').download  = `qrcode-${code}.png`;
+            document.querySelectorAll('#panel-qr select').forEach(s => s.value = '300');
+            show('qrResult');
+        } else if (res.status === 404) {
+            showMsg('qrMsg', 'err', `Short code \u201c${code}\u201d not found.`);
+        } else if (res.status === 410) {
+            showMsg('qrMsg', 'err', `\u201c${code}\u201d has been deactivated.`);
+        } else {
+            const d = await res.json();
+            showMsg('qrMsg', 'err', d.detail || `Error ${res.status}`);
+        }
+    } catch { showMsg('qrMsg', 'err', 'Network error.'); }
+}
+
+function reloadQrTab(size) {
+    if (!_qrTabCode) return;
+    const url = `/api/v1/urls/${encodeURIComponent(_qrTabCode)}/qrcode?size=${size}`;
+    document.getElementById('qrResultImg').src     = url;
+    document.getElementById('qrResultDl').href     = url;
+}
+
+/* â”€â”€ Stats â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 async function loadStats() {
     const code = document.getElementById('statsCode').value.trim();
     if (!code) { showMsg('statsMsg', 'err', 'Enter a short code.'); return; }
 
-    hide('statsMsg'); hide('statsResult');
+    hide('statsMsg'); hide('statsResult'); hide('statsQrPanel');
 
     try {
         const res  = await fetch(`/api/v1/urls/${encodeURIComponent(code)}/stats`);
@@ -338,21 +459,22 @@ async function loadStats() {
 
         if (res.ok) {
             _activeCode = code;
-            document.getElementById('s-url').textContent      = `${location.origin}/${code}`;
-            document.getElementById('s-clicks').textContent   = data.totalClicks;
-            document.getElementById('s-created').textContent  = fmt(data.createdAt);
-            document.getElementById('s-last').textContent     = data.lastClickedAt ? fmt(data.lastClickedAt) : '—';            hide('statsQrPanel'); // reset QR panel for the new code            show('statsResult');
+            document.getElementById('s-url').textContent     = `${location.origin}/${code}`;
+            document.getElementById('s-clicks').textContent  = data.totalClicks;
+            document.getElementById('s-created').textContent = fmt(data.createdAt);
+            document.getElementById('s-last').textContent    = data.lastClickedAt ? fmt(data.lastClickedAt) : '\u2014';
+            show('statsResult');
         } else if (res.status === 404) {
-            showMsg('statsMsg', 'err', `Short code "${code}" not found.`);
+            showMsg('statsMsg', 'err', `Short code \u201c${code}\u201d not found.`);
         } else if (res.status === 410) {
-            showMsg('statsMsg', 'err', `"${code}" exists but has been deactivated.`);
+            showMsg('statsMsg', 'err', `\u201c${code}\u201d exists but has been deactivated.`);
         } else {
             showMsg('statsMsg', 'err', data.detail || `Error ${res.status}`);
         }
     } catch { showMsg('statsMsg', 'err', 'Network error.'); }
 }
 
-/* ── Deactivate ─────────────────────────────────────────────────── */
+/* â”€â”€ Deactivate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 async function deactivate() {
     if (!_activeCode) return;
     if (!confirm(`Deactivate /${_activeCode}?\n\nAll future redirects will return 410 Gone.`)) return;
@@ -369,14 +491,18 @@ async function deactivate() {
     } catch { showMsg('statsMsg', 'err', 'Network error.'); }
 }
 
-/* ── QR code ────────────────────────────────────────────────────── */
+/* â”€â”€ QR helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function toggleQr(panelId) {
     if (!_activeCode) return;
     const panel = document.getElementById(panelId);
     if (!panel.classList.contains('hidden')) { hide(panelId); return; }
-    const isCreate = panelId === 'createQrPanel';
-    setQr(isCreate ? 'createQrImg' : 'statsQrImg',
-          isCreate ? 'createQrDl'  : 'statsQrDl', 300);
+    const map = {
+        createQrPanel: ['createQrImg', 'createQrDl'],
+        statsQrPanel:  ['statsQrImg',  'statsQrDl']
+    };
+    const [imgId, dlId] = map[panelId];
+    setQr(imgId, dlId, 300);
+    panel.querySelectorAll('select').forEach(s => s.value = '300');
     show(panelId);
 }
 
@@ -386,17 +512,15 @@ function reloadQr(imgId, dlId, size) {
 
 function setQr(imgId, dlId, size) {
     const url = `/api/v1/urls/${encodeURIComponent(_activeCode)}/qrcode?size=${size}`;
-    document.getElementById(imgId).src = url;
-    const dl = document.getElementById(dlId);
-    dl.href     = url;
-    dl.download = `qrcode-${_activeCode}.png`;
+    document.getElementById(imgId).src     = url;
+    document.getElementById(dlId).href     = url;
+    document.getElementById(dlId).download = `qrcode-${_activeCode}.png`;
 }
 
-/* ── Helpers ────────────────────────────────────────────────────── */
+/* â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function copyLink(btn) {
-    const url = document.getElementById('shortLink').href;
-    navigator.clipboard.writeText(url).then(() => {
-        btn.textContent = '✓ Copied';
+    navigator.clipboard.writeText(document.getElementById('shortLink').href).then(() => {
+        btn.textContent = '\u2713 Copied';
         setTimeout(() => btn.textContent = 'Copy', 1600);
     });
 }
@@ -417,6 +541,7 @@ function showMsg(id, type, text) {
 /* Enter-key shortcuts */
 document.getElementById('longUrl').addEventListener('keydown',   e => e.key === 'Enter' && createUrl());
 document.getElementById('statsCode').addEventListener('keydown', e => e.key === 'Enter' && loadStats());
+document.getElementById('qrCode').addEventListener('keydown',    e => e.key === 'Enter' && generateQr());
 </script>
 </body>
 </html>
