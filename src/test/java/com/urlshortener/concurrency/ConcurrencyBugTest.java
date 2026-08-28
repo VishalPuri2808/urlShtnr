@@ -1,0 +1,130 @@
+package com.urlshortener.concurrency;
+
+import com.urlshortener.cache.UrlCacheService;
+import com.urlshortener.config.AppProperties;
+import com.urlshortener.dto.CreateUrlRequest;
+import com.urlshortener.dto.CreateUrlResponse;
+import com.urlshortener.exception.CustomAliasConflictException;
+import com.urlshortener.kafka.UrlClickEventProducer;
+import com.urlshortener.model.Url;
+import com.urlshortener.repository.UrlClickRepository;
+import com.urlshortener.repository.UrlRepository;
+import com.urlshortener.service.UrlServiceImpl;
+import com.urlshortener.util.Base62Encoder;
+import com.urlshortener.util.UrlValidator;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
+
+import java.util.HashSet;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
+
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.when;
+
+/**
+ * TASK 5 — Concurrency bug: check-then-act (TOCTOU) race on custom alias creation.
+ *
+ * THE BUG:
+ *   doCreateUrl() checks findByShortCode(alias) → empty, then inserts.
+ *   Two concurrent requests both pass the check; the second INSERT violates the unique
+ *   constraint on short_code and the raw DataIntegrityViolationException escaped to the
+ *   caller as HTTP 500 instead of being translated to CustomAliasConflictException (409).
+ *
+ * THE FIX:
+ *   Wrap the first urlRepository.save() in a try/catch(DataIntegrityViolationException).
+ *   For custom-alias requests, translate to CustomAliasConflictException (409).
+ *   The DB unique constraint remains the authoritative last guard; the pre-check is an
+ *   optimistic fast-path only.
+ *
+ * To replay the pre-fix failure: remove the DataIntegrityViolationException catch-block
+ * from UrlServiceImpl.doCreateUrl() and re-run customAlias_toctouRace_translatedToConflict —
+ * it will throw DataIntegrityViolationException instead of CustomAliasConflictException.
+ */
+@ExtendWith(MockitoExtension.class)
+class ConcurrencyBugTest {
+
+    @Mock private UrlRepository         urlRepository;
+    @Mock private UrlClickRepository    urlClickRepository;
+    @Mock private Base62Encoder         base62Encoder;
+    @Mock private UrlValidator          urlValidator;
+    @Mock private AppProperties         appProperties;
+    @Mock private UrlCacheService       urlCacheService;
+    @Mock private UrlClickEventProducer clickEventProducer;
+
+    private UrlServiceImpl urlService;
+
+    @BeforeEach
+    void setUp() {
+        urlService = new UrlServiceImpl(
+                urlRepository, urlClickRepository, base62Encoder, urlValidator,
+                appProperties, urlCacheService, clickEventProducer);
+        lenient().when(appProperties.getBaseUrl()).thenReturn("http://localhost:8080");
+        lenient().when(urlCacheService.get(anyString())).thenReturn(Optional.empty());
+    }
+
+    // ── Pre-fix reproduction (now PASSING after fix) ────────────────────────
+
+    /**
+     * PRE-FIX: this test threw DataIntegrityViolationException (HTTP 500).
+     * POST-FIX: DataIntegrityViolationException is caught → CustomAliasConflictException (409).
+     *
+     * The scenario simulated: both threads pass findByShortCode() → empty, then the second
+     * thread's INSERT hits the unique constraint on short_code.
+     */
+    @Test
+    void customAlias_toctouRace_translatedToConflict() {
+        when(urlRepository.findByShortCode("race")).thenReturn(Optional.empty());
+        // Simulate the losing thread's INSERT violating the unique constraint
+        when(urlRepository.save(any(Url.class)))
+                .thenThrow(new DataIntegrityViolationException(
+                        "duplicate key value violates unique constraint \"uq_urls_short_code\""));
+
+        // Must produce a clean 409, NOT a 500 DataIntegrityViolationException
+        assertThatThrownBy(() -> urlService.createUrl(
+                new CreateUrlRequest("https://loser.com", "race", null), null))
+                .as("TOCTOU race on custom alias must return 409, not 500")
+                .isInstanceOf(CustomAliasConflictException.class)
+                .hasMessageContaining("race");
+    }
+
+    // ── Post-fix verification ───────────────────────────────────────────────
+
+    /**
+     * 1000 sequential creates with DB-sequence-assigned IDs must produce 1000 unique
+     * base62 codes. base62(monotonically increasing sequence) is inherently collision-free —
+     * this is why we chose DB IDENTITY over application-level counters or random generation.
+     */
+    @Test
+    void autoGeneratedCodes_1000Sequential_noShortCodeCollisions() {
+        AtomicLong idGen = new AtomicLong(0);
+        when(urlRepository.save(any(Url.class))).thenAnswer(inv -> {
+            Url u = inv.getArgument(0);
+            if (u.getId() == null) u.setId(idGen.incrementAndGet());
+            return u;
+        });
+        // Use the real encoder so codes match the actual base62 alphabet
+        Base62Encoder realEncoder = new Base62Encoder();
+        when(base62Encoder.encode(anyLong())).thenAnswer(inv ->
+                realEncoder.encode(inv.<Long>getArgument(0)));
+
+        Set<String> codes = new HashSet<>();
+        for (int i = 0; i < 1000; i++) {
+            CreateUrlResponse resp = urlService.createUrl(
+                    new CreateUrlRequest("https://example.com", null, null), null);
+            codes.add(resp.shortCode());
+        }
+
+        assertThat(codes).hasSize(1000);
+    }
+}

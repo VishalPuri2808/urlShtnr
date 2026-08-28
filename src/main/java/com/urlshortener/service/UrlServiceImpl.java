@@ -16,6 +16,7 @@ import com.urlshortener.repository.UrlClickRepository;
 import com.urlshortener.repository.UrlRepository;
 import com.urlshortener.util.Base62Encoder;
 import com.urlshortener.util.UrlValidator;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -92,7 +93,17 @@ public class UrlServiceImpl implements UrlService {
                 .active(true)
                 .build();
 
-        url = urlRepository.save(url); // IDENTITY INSERT — url.getId() is populated immediately
+        try {
+            url = urlRepository.save(url); // IDENTITY INSERT — url.getId() is populated immediately
+        } catch (DataIntegrityViolationException e) {
+            // TOCTOU fix: another transaction committed the same alias between our pre-check and
+            // this INSERT. The DB unique constraint is the true last guard; translate it cleanly.
+            if (hasCustomAlias) {
+                throw new CustomAliasConflictException(alias);
+            }
+            // For auto-generated codes base62(unique_id) should never collide — propagate.
+            throw e;
+        }
 
         if (!hasCustomAlias) {
             // Replace placeholder with the real base62-encoded DB ID
