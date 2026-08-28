@@ -416,7 +416,7 @@ Distributed under the MIT License. See [`LICENSE`](LICENSE) for more information
 
 <div align="center">
 
-Made with ❤️ by [rishi-2399](https://github.com/rishi-2399)
+Made with ❤️ by [VishalPuri2808]([(https://github.com/VishalPuri2808)])
 
 <img src="https://capsule-render.vercel.app/api?type=waving&color=0:1d4ed8,100:6366f1&height=100&section=footer" width="100%" />
 
