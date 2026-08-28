@@ -7,6 +7,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
+import com.urlshortener.exception.CustomAliasConflictException;
+
 /**
  * Translates domain exceptions into RFC 9457 ProblemDetail responses.
  * Extends ResponseEntityExceptionHandler to inherit Spring MVC defaults
@@ -31,6 +33,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ResponseEntity<ProblemDetail> handleBadRequest(InvalidUrlException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage()));
+    }
+
+    @ExceptionHandler(CustomAliasConflictException.class)
+    public ResponseEntity<ProblemDetail> handleConflict(CustomAliasConflictException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)
