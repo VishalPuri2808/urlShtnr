@@ -6,9 +6,11 @@ import com.urlshortener.dto.CachedUrl;
 import com.urlshortener.dto.CreateUrlRequest;
 import com.urlshortener.dto.CreateUrlResponse;
 import com.urlshortener.dto.UrlStatsResponse;
+import com.urlshortener.event.UrlClickedEvent;
 import com.urlshortener.exception.CustomAliasConflictException;
 import com.urlshortener.exception.UrlNotFoundException;
 import com.urlshortener.exception.UrlNotActiveException;
+import com.urlshortener.kafka.UrlClickEventProducer;
 import com.urlshortener.model.Url;
 import com.urlshortener.repository.UrlClickRepository;
 import com.urlshortener.repository.UrlRepository;
@@ -29,12 +31,13 @@ import java.util.UUID;
 @Service
 public class UrlServiceImpl implements UrlService {
 
-    private final UrlRepository      urlRepository;
-    private final UrlClickRepository urlClickRepository;
-    private final Base62Encoder      base62Encoder;
-    private final UrlValidator       urlValidator;
-    private final AppProperties      appProperties;
-    private final UrlCacheService    urlCacheService;
+    private final UrlRepository        urlRepository;
+    private final UrlClickRepository   urlClickRepository;
+    private final Base62Encoder        base62Encoder;
+    private final UrlValidator         urlValidator;
+    private final AppProperties        appProperties;
+    private final UrlCacheService      urlCacheService;
+    private final UrlClickEventProducer clickEventProducer;
 
     public UrlServiceImpl(
             UrlRepository urlRepository,
@@ -42,13 +45,15 @@ public class UrlServiceImpl implements UrlService {
             Base62Encoder base62Encoder,
             UrlValidator urlValidator,
             AppProperties appProperties,
-            UrlCacheService urlCacheService) {
-        this.urlRepository      = urlRepository;
-        this.urlClickRepository = urlClickRepository;
-        this.base62Encoder      = base62Encoder;
-        this.urlValidator       = urlValidator;
-        this.appProperties      = appProperties;
-        this.urlCacheService    = urlCacheService;
+            UrlCacheService urlCacheService,
+            UrlClickEventProducer clickEventProducer) {
+        this.urlRepository       = urlRepository;
+        this.urlClickRepository  = urlClickRepository;
+        this.base62Encoder       = base62Encoder;
+        this.urlValidator        = urlValidator;
+        this.appProperties       = appProperties;
+        this.urlCacheService     = urlCacheService;
+        this.clickEventProducer  = clickEventProducer;
     }
 
     @Override
@@ -109,6 +114,9 @@ public class UrlServiceImpl implements UrlService {
             if (c.expiresAt() != null && c.expiresAt().isBefore(OffsetDateTime.now())) {
                 throw new UrlNotActiveException(shortCode);
             }
+            // Publish asynchronously — redirect returns before Kafka ack
+            clickEventProducer.publish(
+                    new UrlClickedEvent(c.id(), c.shortCode(), referrer, OffsetDateTime.now()));
             return c.longUrl();
         }
 
@@ -122,6 +130,8 @@ public class UrlServiceImpl implements UrlService {
         }
 
         urlCacheService.put(url);
+        clickEventProducer.publish(
+                new UrlClickedEvent(url.getId(), url.getShortCode(), referrer, OffsetDateTime.now()));
         return url.getLongUrl();
     }
 
@@ -140,7 +150,21 @@ public class UrlServiceImpl implements UrlService {
     @Override
     @Transactional(readOnly = true)
     public UrlStatsResponse getStats(String shortCode) {
-        throw new UnsupportedOperationException("Implemented in TASK 4");
+        Url url = urlRepository.findByShortCode(shortCode)
+                .orElseThrow(() -> new UrlNotFoundException(shortCode));
+
+        long totalClicks = urlClickRepository.countByUrl_Id(url.getId());
+        OffsetDateTime lastClickedAt = urlClickRepository
+                .findLastClickedAtByUrlId(url.getId())
+                .orElse(null);
+
+        return new UrlStatsResponse(
+                url.getShortCode(),
+                url.getLongUrl(),
+                totalClicks,
+                lastClickedAt,
+                url.getCreatedAt()
+        );
     }
 
     private CreateUrlResponse toResponse(Url url) {

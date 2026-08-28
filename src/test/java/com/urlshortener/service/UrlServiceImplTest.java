@@ -5,9 +5,12 @@ import com.urlshortener.config.AppProperties;
 import com.urlshortener.dto.CachedUrl;
 import com.urlshortener.dto.CreateUrlRequest;
 import com.urlshortener.dto.CreateUrlResponse;
+import com.urlshortener.dto.UrlStatsResponse;
+import com.urlshortener.event.UrlClickedEvent;
 import com.urlshortener.exception.CustomAliasConflictException;
 import com.urlshortener.exception.UrlNotFoundException;
 import com.urlshortener.exception.UrlNotActiveException;
+import com.urlshortener.kafka.UrlClickEventProducer;
 import com.urlshortener.model.Url;
 import com.urlshortener.repository.UrlClickRepository;
 import com.urlshortener.repository.UrlRepository;
@@ -31,12 +34,13 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class UrlServiceImplTest {
 
-    @Mock private UrlRepository      urlRepository;
-    @Mock private UrlClickRepository urlClickRepository;
-    @Mock private Base62Encoder      base62Encoder;
-    @Mock private UrlValidator       urlValidator;
-    @Mock private AppProperties      appProperties;
-    @Mock private UrlCacheService    urlCacheService;
+    @Mock private UrlRepository        urlRepository;
+    @Mock private UrlClickRepository   urlClickRepository;
+    @Mock private Base62Encoder        base62Encoder;
+    @Mock private UrlValidator         urlValidator;
+    @Mock private AppProperties        appProperties;
+    @Mock private UrlCacheService      urlCacheService;
+    @Mock private UrlClickEventProducer clickEventProducer;
 
     private UrlServiceImpl urlService;
 
@@ -44,7 +48,7 @@ class UrlServiceImplTest {
     void setUp() {
         urlService = new UrlServiceImpl(
                 urlRepository, urlClickRepository, base62Encoder, urlValidator,
-                appProperties, urlCacheService);
+                appProperties, urlCacheService, clickEventProducer);
         // lenient: some tests don't reach toResponse(); we don't want spurious failures
         lenient().when(appProperties.getBaseUrl()).thenReturn("http://localhost:8080");
         // Default: cache miss so resolveUrl tests fall through to the DB mock
@@ -212,7 +216,52 @@ class UrlServiceImplTest {
 
         assertThatCode(() -> urlService.resolveUrl("abc", null)).doesNotThrowAnyException();
     }
+    // ── resolveUrl — click event publishing ───────────────────────────────
 
+    @Test
+    void resolveUrl_activeUrl_publishesClickEvent() {
+        Url url = activeUrl(1L, "abc", "https://example.com");
+        when(urlRepository.findByShortCode("abc")).thenReturn(Optional.of(url));
+
+        urlService.resolveUrl("abc", "https://referrer.com");
+
+        verify(clickEventProducer).publish(any(UrlClickedEvent.class));
+    }
+
+    @Test
+    void resolveUrl_notFound_doesNotPublish() {
+        when(urlRepository.findByShortCode("xyz")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> urlService.resolveUrl("xyz", null))
+                .isInstanceOf(UrlNotFoundException.class);
+        verify(clickEventProducer, never()).publish(any());
+    }
+
+    // ── getStats ───────────────────────────────────────────────────────
+
+    @Test
+    void getStats_returnsAggregatedData() {
+        Url url = activeUrl(1L, "abc", "https://example.com");
+        when(urlRepository.findByShortCode("abc")).thenReturn(Optional.of(url));
+        when(urlClickRepository.countByUrl_Id(1L)).thenReturn(42L);
+        when(urlClickRepository.findLastClickedAtByUrlId(1L))
+                .thenReturn(Optional.of(OffsetDateTime.now()));
+
+        UrlStatsResponse stats = urlService.getStats("abc");
+
+        assertThat(stats.shortCode()).isEqualTo("abc");
+        assertThat(stats.longUrl()).isEqualTo("https://example.com");
+        assertThat(stats.totalClicks()).isEqualTo(42L);
+        assertThat(stats.lastClickedAt()).isNotNull();
+    }
+
+    @Test
+    void getStats_urlNotFound_throws() {
+        when(urlRepository.findByShortCode("xyz")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> urlService.getStats("xyz"))
+                .isInstanceOf(UrlNotFoundException.class);
+    }
     // ── deactivateUrl ────────────────────────────────────────────────────────
 
     @Test
