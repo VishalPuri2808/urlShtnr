@@ -117,7 +117,23 @@ public class UrlServiceImpl implements UrlService {
     @Override
     @Transactional(readOnly = true)
     public String resolveUrl(String shortCode, String referrer) {
-        // Read-through cache: serve from Redis when possible
+        CachedUrl c = lookupActiveUrl(shortCode);
+        // Publish asynchronously — redirect returns before Kafka ack
+        clickEventProducer.publish(
+                new UrlClickedEvent(c.id(), c.shortCode(), referrer, OffsetDateTime.now()));
+        return c.longUrl();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public String resolveShortUrl(String shortCode) {
+        lookupActiveUrl(shortCode); // validates; throws 404/410 without publishing a click event
+        return appProperties.getBaseUrl() + "/" + shortCode;
+    }
+
+    /** Cache-first active-URL lookup shared by resolveUrl and resolveShortUrl. */
+    private CachedUrl lookupActiveUrl(String shortCode) {
+        // Cache-hit path
         Optional<CachedUrl> cached = urlCacheService.get(shortCode);
         if (cached.isPresent()) {
             CachedUrl c = cached.get();
@@ -125,25 +141,19 @@ public class UrlServiceImpl implements UrlService {
             if (c.expiresAt() != null && c.expiresAt().isBefore(OffsetDateTime.now())) {
                 throw new UrlNotActiveException(shortCode);
             }
-            // Publish asynchronously — redirect returns before Kafka ack
-            clickEventProducer.publish(
-                    new UrlClickedEvent(c.id(), c.shortCode(), referrer, OffsetDateTime.now()));
-            return c.longUrl();
+            return c;
         }
 
         // Cache miss — load from DB and populate for active, non-expired URLs only
         Url url = urlRepository.findByShortCode(shortCode)
                 .orElseThrow(() -> new UrlNotFoundException(shortCode));
-
         if (!url.isActive()) throw new UrlNotActiveException(shortCode);
         if (url.getExpiresAt() != null && url.getExpiresAt().isBefore(OffsetDateTime.now())) {
             throw new UrlNotActiveException(shortCode);
         }
-
         urlCacheService.put(url);
-        clickEventProducer.publish(
-                new UrlClickedEvent(url.getId(), url.getShortCode(), referrer, OffsetDateTime.now()));
-        return url.getLongUrl();
+        return new CachedUrl(url.getId(), url.getShortCode(), url.getLongUrl(),
+                url.getCreatedAt(), url.getExpiresAt(), url.isActive());
     }
 
     @Override

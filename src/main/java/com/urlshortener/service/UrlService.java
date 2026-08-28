@@ -22,6 +22,13 @@ public interface UrlService {
     String resolveUrl(String shortCode, String referrer);
 
     /**
+     * Validates the short code and returns the full short URL (base + shortCode).
+     * Applies the same 404/410 rules as resolveUrl but does NOT publish a click event —
+     * scanning a QR code must not increment the redirect click counter.
+     */
+    String resolveShortUrl(String shortCode);
+
+    /**
      * Soft-deletes the URL and synchronously invalidates its Redis cache entry.
      * After this call any cached redirect must return 410, not the stale long URL.
      */

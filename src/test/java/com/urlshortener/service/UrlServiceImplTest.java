@@ -285,6 +285,36 @@ class UrlServiceImplTest {
         verify(urlRepository, never()).save(any(Url.class));
     }
 
+    // ── resolveShortUrl ──────────────────────────────────────────────────────
+
+    @Test
+    void resolveShortUrl_activeUrl_returnsShortUrl() {
+        when(urlRepository.findByShortCode("abc"))
+                .thenReturn(Optional.of(activeUrl(1L, "abc", "https://example.com")));
+
+        assertThat(urlService.resolveShortUrl("abc")).isEqualTo("http://localhost:8080/abc");
+        verify(clickEventProducer, never()).publish(any());
+    }
+
+    @Test
+    void resolveShortUrl_notFound_throws404() {
+        when(urlRepository.findByShortCode("xyz")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> urlService.resolveShortUrl("xyz"))
+                .isInstanceOf(UrlNotFoundException.class);
+    }
+
+    @Test
+    void resolveShortUrl_deactivated_throws410() {
+        Url url = activeUrl(1L, "abc", "https://example.com");
+        url.setActive(false);
+        when(urlRepository.findByShortCode("abc")).thenReturn(Optional.of(url));
+
+        assertThatThrownBy(() -> urlService.resolveShortUrl("abc"))
+                .isInstanceOf(UrlNotActiveException.class);
+        verify(clickEventProducer, never()).publish(any());
+    }
+
     // ── helpers ──────────────────────────────────────────────────────────────
 
     private CreateUrlRequest request(String longUrl, String alias) {
