@@ -1,0 +1,24 @@
+# Maven build output
+target/
+
+# IDE metadata
+.idea/
+*.iml
+.vscode/
+
+# Compiled class files
+*.class
+
+# Runtime artifacts
+*.jar
+*.war
+
+# Environment — NEVER commit real credentials
+.env
+
+# macOS
+.DS_Store
+
+# Log files
+*.log
+logs/

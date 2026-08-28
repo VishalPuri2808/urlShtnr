@@ -1,0 +1,76 @@
+spring:
+  application:
+    name: url-shortener
+
+  # ── Datasource ─────────────────────────────────────────────────────────────
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:urlshortener}
+    username: ${DB_USER:urlshortener}
+    password: ${DB_PASSWORD:urlshortener}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+      minimum-idle: 2
+
+  # validate = Hibernate checks schema matches entities but does NOT alter it;
+  # Flyway owns all DDL changes
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        default_batch_fetch_size: 20
+    open-in-view: false
+
+  # ── Flyway ─────────────────────────────────────────────────────────────────
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  # ── Redis ──────────────────────────────────────────────────────────────────
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+  # ── Kafka ──────────────────────────────────────────────────────────────────
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer:   org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        # Disable type headers so the consumer drives deserialization via config
+        spring.json.add.type.headers: "false"
+    consumer:
+      group-id:           url-analytics-consumer
+      auto-offset-reset:  earliest
+      key-deserializer:   org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages:    "com.urlshortener.event"
+        spring.json.value.default.type:  "com.urlshortener.event.UrlClickedEvent"
+
+  # ── Jackson ────────────────────────────────────────────────────────────────
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    time-zone: UTC
+
+  # Enable RFC 9457 ProblemDetail for standard Spring MVC exceptions
+  mvc:
+    problemdetails:
+      enabled: true
+
+# ── Server ──────────────────────────────────────────────────────────────────
+server:
+  port: ${SERVER_PORT:8080}
+
+# ── Application-specific properties (bound by AppProperties) ────────────────
+app:
+  base-url: ${BASE_URL:http://localhost:8080}
+  cache:
+    ttl-seconds: ${CACHE_TTL_SECONDS:3600}
+  kafka:
+    topic:
+      click-events: ${KAFKA_CLICK_EVENTS_TOPIC:url.click.events}
