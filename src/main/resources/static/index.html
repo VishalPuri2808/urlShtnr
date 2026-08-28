@@ -139,6 +139,44 @@
         .msg.err { background: rgba(239,68,68,.1);  color: var(--err); border: 1px solid rgba(239,68,68,.3);  }
         .hidden { display: none !important; }
 
+        /* QR code panel */
+        .qr-panel {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            text-align: center;
+        }
+        .qr-panel img {
+            background: #fff;
+            border-radius: 6px;
+            padding: 10px;
+            max-width: 220px;
+            display: block;
+            margin: 0 auto 0.75rem;
+        }
+        .qr-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+            font-size: 0.82rem;
+            color: var(--muted);
+        }
+        .qr-controls select {
+            padding: 0.35rem 0.6rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            color: var(--text);
+            font-size: 0.82rem;
+            cursor: pointer;
+        }
+        .qr-dl { color: var(--hover); text-decoration: none; font-weight: 600; }
+        .qr-dl:hover { text-decoration: underline; }
+
         footer { text-align: center; color: var(--muted); font-size: 0.75rem; margin-top: 2rem; }
     </style>
 </head>
@@ -175,6 +213,20 @@
         <div id="createResult" class="result-box hidden">
             <a id="shortLink" href="#" target="_blank" rel="noopener"></a>
             <button class="outline" onclick="copyLink(this)">Copy</button>
+            <button class="outline" onclick="toggleQr('createQrPanel')">&#x1F4F7; QR</button>
+        </div>
+        <div id="createQrPanel" class="qr-panel hidden">
+            <img id="createQrImg" src="" alt="QR code">
+            <div class="qr-controls">
+                <span>Size:</span>
+                <select onchange="reloadQr('createQrImg','createQrDl',this.value)">
+                    <option value="200">200 px</option>
+                    <option value="300" selected>300 px</option>
+                    <option value="400">400 px</option>
+                    <option value="600">600 px</option>
+                </select>
+                <a id="createQrDl" href="#" download="qrcode.png" class="qr-dl">&#x2B07; Download</a>
+            </div>
         </div>
     </div>
 
@@ -209,7 +261,21 @@
                 </div>
             </div>
             <div class="deact-row">
+                <button class="outline" onclick="toggleQr('statsQrPanel')" style="margin-right:auto">&#x1F4F7; QR</button>
                 <button class="danger" onclick="deactivate()">Deactivate link</button>
+            </div>
+            <div id="statsQrPanel" class="qr-panel hidden">
+                <img id="statsQrImg" src="" alt="QR code">
+                <div class="qr-controls">
+                    <span>Size:</span>
+                    <select onchange="reloadQr('statsQrImg','statsQrDl',this.value)">
+                        <option value="200">200 px</option>
+                        <option value="300" selected>300 px</option>
+                        <option value="400">400 px</option>
+                        <option value="600">600 px</option>
+                    </select>
+                    <a id="statsQrDl" href="#" download="qrcode.png" class="qr-dl">&#x2B07; Download</a>
+                </div>
             </div>
         </div>
     </div>
@@ -250,6 +316,7 @@ async function createUrl() {
             a.href = a.textContent = data.shortUrl;
             _activeCode = data.shortCode;
             document.getElementById('statsCode').value = data.shortCode;
+            hide('createQrPanel'); // reset QR panel for the new code
             show('createResult');
         } else {
             showMsg('createMsg', 'err', data.detail || `Error ${res.status}`);
@@ -274,8 +341,7 @@ async function loadStats() {
             document.getElementById('s-url').textContent      = `${location.origin}/${code}`;
             document.getElementById('s-clicks').textContent   = data.totalClicks;
             document.getElementById('s-created').textContent  = fmt(data.createdAt);
-            document.getElementById('s-last').textContent     = data.lastClickedAt ? fmt(data.lastClickedAt) : '—';
-            show('statsResult');
+            document.getElementById('s-last').textContent     = data.lastClickedAt ? fmt(data.lastClickedAt) : '—';            hide('statsQrPanel'); // reset QR panel for the new code            show('statsResult');
         } else if (res.status === 404) {
             showMsg('statsMsg', 'err', `Short code "${code}" not found.`);
         } else if (res.status === 410) {
@@ -301,6 +367,29 @@ async function deactivate() {
             showMsg('statsMsg', 'err', d.detail || `Error ${res.status}`);
         }
     } catch { showMsg('statsMsg', 'err', 'Network error.'); }
+}
+
+/* ── QR code ────────────────────────────────────────────────────── */
+function toggleQr(panelId) {
+    if (!_activeCode) return;
+    const panel = document.getElementById(panelId);
+    if (!panel.classList.contains('hidden')) { hide(panelId); return; }
+    const isCreate = panelId === 'createQrPanel';
+    setQr(isCreate ? 'createQrImg' : 'statsQrImg',
+          isCreate ? 'createQrDl'  : 'statsQrDl', 300);
+    show(panelId);
+}
+
+function reloadQr(imgId, dlId, size) {
+    if (_activeCode) setQr(imgId, dlId, size);
+}
+
+function setQr(imgId, dlId, size) {
+    const url = `/api/v1/urls/${encodeURIComponent(_activeCode)}/qrcode?size=${size}`;
+    document.getElementById(imgId).src = url;
+    const dl = document.getElementById(dlId);
+    dl.href     = url;
+    dl.download = `qrcode-${_activeCode}.png`;
 }
 
 /* ── Helpers ────────────────────────────────────────────────────── */
