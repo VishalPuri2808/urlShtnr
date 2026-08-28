@@ -1,6 +1,8 @@
 package com.urlshortener.service;
 
+import com.urlshortener.cache.UrlCacheService;
 import com.urlshortener.config.AppProperties;
+import com.urlshortener.dto.CachedUrl;
 import com.urlshortener.dto.CreateUrlRequest;
 import com.urlshortener.dto.CreateUrlResponse;
 import com.urlshortener.exception.CustomAliasConflictException;
@@ -19,6 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.OffsetDateTime;
 import java.util.Optional;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -33,15 +36,19 @@ class UrlServiceImplTest {
     @Mock private Base62Encoder      base62Encoder;
     @Mock private UrlValidator       urlValidator;
     @Mock private AppProperties      appProperties;
+    @Mock private UrlCacheService    urlCacheService;
 
     private UrlServiceImpl urlService;
 
     @BeforeEach
     void setUp() {
         urlService = new UrlServiceImpl(
-                urlRepository, urlClickRepository, base62Encoder, urlValidator, appProperties);
+                urlRepository, urlClickRepository, base62Encoder, urlValidator,
+                appProperties, urlCacheService);
         // lenient: some tests don't reach toResponse(); we don't want spurious failures
         lenient().when(appProperties.getBaseUrl()).thenReturn("http://localhost:8080");
+        // Default: cache miss so resolveUrl tests fall through to the DB mock
+        lenient().when(urlCacheService.get(anyString())).thenReturn(Optional.empty());
     }
 
     // ── createUrl — auto-generated short code ───────────────────────────────
@@ -122,7 +129,44 @@ class UrlServiceImplTest {
         verify(urlRepository, never()).save(any(Url.class));
     }
 
-    // ── resolveUrl ───────────────────────────────────────────────────────────
+    // ── resolveUrl — cache behaviour ───────────────────────────────────────
+
+    @Test
+    void resolveUrl_cacheHit_skipsDb() {
+        CachedUrl hit = new CachedUrl(1L, "abc", "https://example.com",
+                OffsetDateTime.now(), null, true);
+        when(urlCacheService.get("abc")).thenReturn(Optional.of(hit));
+
+        assertThat(urlService.resolveUrl("abc", null)).isEqualTo("https://example.com");
+        verify(urlRepository, never()).findByShortCode(anyString());
+    }
+
+    @Test
+    void resolveUrl_cacheMiss_populatesCache() {
+        Url url = activeUrl(1L, "abc", "https://example.com");
+        when(urlRepository.findByShortCode("abc")).thenReturn(Optional.of(url));
+
+        urlService.resolveUrl("abc", null);
+
+        verify(urlCacheService).put(url);
+    }
+
+    @Test
+    void resolveUrl_cachedButInactive_throws410WithoutDbQuery() {
+        // Defensive: should never happen in practice due to synchronous eviction,
+        // but we check the flag anyway in case Redis has a stale entry.
+        CachedUrl inactive = new CachedUrl(1L, "abc", "https://example.com",
+                OffsetDateTime.now(), null, false);
+        when(urlCacheService.get("abc")).thenReturn(Optional.of(inactive));
+
+        assertThatThrownBy(() -> urlService.resolveUrl("abc", null))
+                .isInstanceOf(UrlNotActiveException.class);
+        verify(urlRepository, never()).findByShortCode(anyString());
+    }
+
+    // ── resolveUrl — DB paths (cache miss) ─────────────────────────────
+
+    // (setUp configures urlCacheService.get() to return empty by default)
 
     @Test
     void resolveUrl_activeNonExpired_returnsLongUrl() {
@@ -172,7 +216,7 @@ class UrlServiceImplTest {
     // ── deactivateUrl ────────────────────────────────────────────────────────
 
     @Test
-    void deactivateUrl_found_setsActiveFalse() {
+    void deactivateUrl_found_setsActiveFalseAndEvictsCache() {
         Url url = activeUrl(1L, "abc", "https://example.com");
         when(urlRepository.findByShortCode("abc")).thenReturn(Optional.of(url));
 
@@ -180,6 +224,7 @@ class UrlServiceImplTest {
 
         assertThat(url.isActive()).isFalse();
         verify(urlRepository).save(url);
+        verify(urlCacheService).evict("abc");
     }
 
     @Test

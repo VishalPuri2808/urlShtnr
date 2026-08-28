@@ -1,6 +1,8 @@
 package com.urlshortener.service;
 
+import com.urlshortener.cache.UrlCacheService;
 import com.urlshortener.config.AppProperties;
+import com.urlshortener.dto.CachedUrl;
 import com.urlshortener.dto.CreateUrlRequest;
 import com.urlshortener.dto.CreateUrlResponse;
 import com.urlshortener.dto.UrlStatsResponse;
@@ -16,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -31,18 +34,21 @@ public class UrlServiceImpl implements UrlService {
     private final Base62Encoder      base62Encoder;
     private final UrlValidator       urlValidator;
     private final AppProperties      appProperties;
+    private final UrlCacheService    urlCacheService;
 
     public UrlServiceImpl(
             UrlRepository urlRepository,
             UrlClickRepository urlClickRepository,
             Base62Encoder base62Encoder,
             UrlValidator urlValidator,
-            AppProperties appProperties) {
+            AppProperties appProperties,
+            UrlCacheService urlCacheService) {
         this.urlRepository      = urlRepository;
         this.urlClickRepository = urlClickRepository;
         this.base62Encoder      = base62Encoder;
         this.urlValidator       = urlValidator;
         this.appProperties      = appProperties;
+        this.urlCacheService    = urlCacheService;
     }
 
     @Override
@@ -95,15 +101,27 @@ public class UrlServiceImpl implements UrlService {
     @Override
     @Transactional(readOnly = true)
     public String resolveUrl(String shortCode, String referrer) {
+        // Read-through cache: serve from Redis when possible
+        Optional<CachedUrl> cached = urlCacheService.get(shortCode);
+        if (cached.isPresent()) {
+            CachedUrl c = cached.get();
+            if (!c.active()) throw new UrlNotActiveException(shortCode);
+            if (c.expiresAt() != null && c.expiresAt().isBefore(OffsetDateTime.now())) {
+                throw new UrlNotActiveException(shortCode);
+            }
+            return c.longUrl();
+        }
+
+        // Cache miss — load from DB and populate for active, non-expired URLs only
         Url url = urlRepository.findByShortCode(shortCode)
                 .orElseThrow(() -> new UrlNotFoundException(shortCode));
 
-        if (!url.isActive()) {
-            throw new UrlNotActiveException(shortCode);
-        }
+        if (!url.isActive()) throw new UrlNotActiveException(shortCode);
         if (url.getExpiresAt() != null && url.getExpiresAt().isBefore(OffsetDateTime.now())) {
             throw new UrlNotActiveException(shortCode);
         }
+
+        urlCacheService.put(url);
         return url.getLongUrl();
     }
 
@@ -114,6 +132,9 @@ public class UrlServiceImpl implements UrlService {
                 .orElseThrow(() -> new UrlNotFoundException(shortCode));
         url.setActive(false);
         urlRepository.save(url);
+        // Synchronous eviction — must complete before this method returns so that the
+        // very next resolveUrl call sees 410 even if the entry was cached moments ago.
+        urlCacheService.evict(shortCode);
     }
 
     @Override
