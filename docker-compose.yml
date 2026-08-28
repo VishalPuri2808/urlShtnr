@@ -31,21 +31,21 @@ services:
       retries: 5
 
   kafka:
-    # Official Apache Kafka image (3.7+); replaces bitnami which is no longer on Docker Hub
+    # Official Apache Kafka image (3.7+); bitnami/kafka was removed from Docker Hub
     image: apache/kafka:3.7.0
     container_name: urlshortener-kafka
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
-      # PLAINTEXT = internal container traffic; EXTERNAL = host access; CONTROLLER = KRaft
+      # PLAINTEXT = container-to-container; EXTERNAL = host access; CONTROLLER = KRaft
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,EXTERNAL://0.0.0.0:9094,CONTROLLER://0.0.0.0:9093
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-      # Required for single-broker setup — avoid under-replication errors
+      # Required for single-broker setup to avoid under-replication errors
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
