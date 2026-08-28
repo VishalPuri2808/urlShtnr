@@ -144,6 +144,39 @@ Historical analytics are **retained indefinitely** (policy decision — see ARCH
 
 ---
 
+### GET /api/v1/urls/{shortCode}/qrcode — QR code image
+
+```bash
+# Default 300×300 px PNG
+curl -s http://localhost:8080/api/v1/urls/promo-aug/qrcode --output qr.png
+open qr.png   # macOS; use xdg-open on Linux or start on Windows
+
+# Custom size (clamped server-side to 100–1000 px)
+curl -s "http://localhost:8080/api/v1/urls/promo-aug/qrcode?size=500" --output qr-500.png
+```
+
+The QR encodes the full short URL (e.g. `http://localhost:8080/promo-aug`). Any QR scanner
+will redirect the user the same way a browser would.
+
+| Status | Meaning |
+|--------|--------|
+| 200 | `Content-Type: image/png` — QR PNG in the response body |
+| 400 | Out-of-range `size` is **not** rejected — it is silently clamped to [100, 1000] |
+| 404 | Short code does not exist |
+| 410 | URL was deactivated or expired |
+
+---
+
+## Web UI
+
+A built-in dashboard is served at **http://localhost:8080**.
+
+- **Shorten a URL** — paste any URL, optional custom alias and expiry, one-click Copy
+- **Stats & Management** — look up click count, last-click time, creation date; Deactivate button with confirm prompt
+- **QR code** — use the API endpoint directly: `GET /api/v1/urls/{shortCode}/qrcode`
+
+---
+
 ## Environment Variables
 
 | Variable | Default | Description |
@@ -155,7 +188,7 @@ Historical analytics are **retained indefinitely** (policy decision — see ARCH
 | `DB_PASSWORD` | `urlshortener` | **Change in production** |
 | `REDIS_HOST` | `localhost` | Redis host |
 | `REDIS_PORT` | `6379` | Redis port |
-| `KAFKA_BOOTSTRAP_SERVERS` | `localhost:9092` | Kafka bootstrap address |
+| `KAFKA_BOOTSTRAP_SERVERS` | `localhost:9094` | Kafka bootstrap address (port 9094 = external Docker listener for host access) |
 | `SERVER_PORT` | `8080` | HTTP port |
 | `BASE_URL` | `http://localhost:8080` | Prefix used to build `shortUrl` in responses |
 | `CACHE_TTL_SECONDS` | `3600` | Redis TTL for short-code entries |
@@ -172,23 +205,24 @@ src/
   main/java/com/urlshortener/
     cache/         UrlCacheService (Redis read-through)
     config/        AppProperties, KafkaConfig, RedisConfig
-    controller/    RedirectController, UrlController
+    controller/    RedirectController, UiController, UrlController
     dto/           CreateUrlRequest, CreateUrlResponse, UrlStatsResponse, CachedUrl (records)
     event/         UrlClickedEvent (Kafka payload)
     exception/     domain exceptions + GlobalExceptionHandler
     kafka/         UrlClickEventProducer, UrlClickEventConsumer
     model/         Url, UrlClick (JPA entities)
     repository/    UrlRepository, UrlClickRepository
-    service/       UrlService interface, UrlServiceImpl
+    service/       UrlService interface, UrlServiceImpl, QrCodeService
     util/          Base62Encoder, UrlValidator
   main/resources/
     application.yml
-    db/migration/V1__initial_schema.sql   (Flyway)
+    static/index.html                    (built-in Web UI)
+    db/migration/V1__initial_schema.sql  (Flyway)
   test/java/com/urlshortener/
     cache/         CacheInvalidationTest (Testcontainers)
     concurrency/   ConcurrencyBugTest, ConcurrencyIntegrationTest (Testcontainers)
-    integration/   UrlShortenerIntegrationTest (Testcontainers — full quality-gate suite)
+    integration/   QrCodeIntegrationTest, UrlShortenerIntegrationTest (Testcontainers)
     kafka/         UrlClickEventConsumerTest
-    service/       UrlServiceImplTest
+    service/       QrCodeServiceTest, UrlServiceImplTest
     util/          Base62EncoderTest, UrlValidatorTest
 ```

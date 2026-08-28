@@ -177,9 +177,6 @@
         .stat-value.big   { font-size: 1.5rem; color: var(--blue); }
         .deact-row        { display: flex; justify-content: space-between; align-items: center; margin-top: 0.85rem; }
 
-<<<<<<< Updated upstream
-        footer { text-align: center; color: var(--muted); font-size: 0.75rem; margin-top: 2rem; }
-=======
         /* â”€â”€ QR panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
         .qr-panel {
             margin-top: 1rem;
@@ -232,7 +229,6 @@
         .hidden { display: none !important; }
 
         footer { text-align: center; color: var(--muted); font-size: 0.75rem; padding: 1.5rem; }
->>>>>>> Stashed changes
     </style>
 </head>
 <body>
@@ -279,9 +275,6 @@
         <div id="createMsg" class="msg hidden"></div>
         <div id="createResult" class="result-box hidden">
             <a id="shortLink" href="#" target="_blank" rel="noopener"></a>
-<<<<<<< Updated upstream
-            <button class="outline" onclick="copyLink(this)">Copy</button>
-=======
             <button class="btn btn-outline" onclick="copyLink(this)">Copy</button>
             <button class="btn btn-outline" onclick="toggleQr('createQrPanel')">&#x1F4F7; QR</button>
         </div>
@@ -297,7 +290,6 @@
                 </select>
                 <a id="createQrDl" href="#" download="qrcode.png" class="qr-dl">&#x2B07; Download</a>
             </div>
->>>>>>> Stashed changes
         </div>
     </div>
 
@@ -357,12 +349,8 @@
                 </div>
             </div>
             <div class="deact-row">
-<<<<<<< Updated upstream
-                <button class="danger" onclick="deactivate()">Deactivate link</button>
-=======
                 <button class="btn btn-outline" onclick="toggleQr('statsQrPanel')">&#x1F4F7; QR</button>
                 <button class="btn btn-danger"  onclick="deactivate()">Deactivate link</button>
->>>>>>> Stashed changes
             </div>
         </div>
     </div>
@@ -414,10 +402,7 @@ async function createUrl() {
             a.href = a.textContent = data.shortUrl;
             _activeCode = data.shortCode;
             document.getElementById('statsCode').value = data.shortCode;
-<<<<<<< Updated upstream
-=======
             document.getElementById('qrCode').value    = data.shortCode;
->>>>>>> Stashed changes
             show('createResult');
         } else {
             showMsg('createMsg', 'err', data.detail || `Error ${res.status}`);
@@ -474,17 +459,10 @@ async function loadStats() {
 
         if (res.ok) {
             _activeCode = code;
-<<<<<<< Updated upstream
-            document.getElementById('s-url').textContent      = `${location.origin}/${code}`;
-            document.getElementById('s-clicks').textContent   = data.totalClicks;
-            document.getElementById('s-created').textContent  = fmt(data.createdAt);
-            document.getElementById('s-last').textContent     = data.lastClickedAt ? fmt(data.lastClickedAt) : '—';
-=======
             document.getElementById('s-url').textContent     = `${location.origin}/${code}`;
             document.getElementById('s-clicks').textContent  = data.totalClicks;
             document.getElementById('s-created').textContent = fmt(data.createdAt);
             document.getElementById('s-last').textContent    = data.lastClickedAt ? fmt(data.lastClickedAt) : '\u2014';
->>>>>>> Stashed changes
             show('statsResult');
         } else if (res.status === 404) {
             showMsg('statsMsg', 'err', `Short code \u201c${code}\u201d not found.`);
@@ -513,9 +491,6 @@ async function deactivate() {
     } catch { showMsg('statsMsg', 'err', 'Network error.'); }
 }
 
-<<<<<<< Updated upstream
-/* ── Helpers ────────────────────────────────────────────────────── */
-=======
 /* â”€â”€ QR helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function toggleQr(panelId) {
     if (!_activeCode) return;
@@ -543,7 +518,6 @@ function setQr(imgId, dlId, size) {
 }
 
 /* â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
->>>>>>> Stashed changes
 function copyLink(btn) {
     navigator.clipboard.writeText(document.getElementById('shortLink').href).then(() => {
         btn.textContent = '\u2713 Copied';

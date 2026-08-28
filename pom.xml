@@ -133,7 +133,17 @@
             <artifactId>testcontainers</artifactId>
             <scope>test</scope>
         </dependency>
-
+        <!-- QR code generation (encoder in main; decoder used in integration tests) -->
+        <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>core</artifactId>
+            <version>3.5.3</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>javase</artifactId>
+            <version>3.5.3</version>
+        </dependency>
     </dependencies>
 
     <!-- Pin all Testcontainers modules to the same version via BOM -->
